@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h3 class="card-title text-center mb-4">Analyze News Bias</h3>
+                <form>
+                    <div class="mb-3">
+                        <label for="newsText" class="form-label">Paste News Article Here:</label>
+                        <textarea class="form-control" id="newsText" rows="6" placeholder="Enter text to analyze..."></textarea>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-primary btn-lg">Analyze Bias (Demo)</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
