@@ -1,1 +1,58 @@
-# XJCO2913-Team-Project
+# News-Spectrum
+
+> A BERT-powered web application for analyzing the emotional tone of news articles to empower readers in identifying potential bias.
+
+![Project Status](https://img.shields.io/badge/status-active-success.svg)
+![Python](https://img.shields.io/badge/python-3.10-blue.svg)
+![Framework](https://img.shields.io/badge/flask-2.0+-green.svg)
+
+## Overview
+
+**News-Spectrum** is a tool designed to bring transparency to news consumption. Instead of using LLMs to arbitrarily label news as "Fake" or "Biased," we use a Distil-BERT sentiment analysis model to identify the emotional coloring of the text.
+
+We believe in Human-in-the-loop AI: our tool visualizes the data, but the final judgment remains with the user.
+
+## Tech Stack
+
+* **Backend**: Python, Flask
+* **AI Model**: PyTorch, Hugging Face Transformers
+* **Frontend**: HTML5, Bootstrap 5, Vanilla JavaScript
+
+## Quick Start
+
+Follow these steps to set up the project locally.
+
+#### 1. Clone the Repository
+```bash
+git clone https://github.com/jason-one-cpu/XJCO2913-Team-Project.git
+cd XJCO2913-Team-Project
+```
+
+#### 2. Set Up Virtual Environment
+
+It's recommended to use a virtual environment to manage dependencies.
+
+```bash
+# macOS/Linux
+python3 -m venv venv
+source venv/bin/activate
+
+# Windows
+python -m venv venv
+venv\Scripts\activate
+```
+
+#### 3. Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+#### 4. Run the Application
+
+```bash
+python run.py
+```
+
+You will see logs indicating the BERT model is initializing. Once ready, access the app at: `http://127.0.0.1:5000/`
+
