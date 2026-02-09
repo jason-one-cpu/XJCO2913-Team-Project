@@ -2,30 +2,36 @@
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-md-8">
+    <div class="col-md-10">
         <div class="card shadow-sm">
             <div class="card-body">
-                <h3 class="card-title text-center mb-4">News-Spectrum Analysis</h3>
+                <h3 class="card-title text-center mb-4">News Spectrum Analysis</h3>
+                <p class="text-muted text-center mb-4">
+                    Visualize the emotional structure of news. <br>
+                    <span class="badge bg-success bg-opacity-25 text-dark">Positive</span>
+                    <span class="badge bg-secondary bg-opacity-10 text-dark">Neutral</span>
+                    <span class="badge bg-danger bg-opacity-25 text-dark">Negative</span>
+                </p>
 
                 <form id="analyzeForm">
                     <div class="mb-3">
-                        <label for="newsText" class="form-label">Paste News Article Here:</label>
-                        <textarea class="form-control" id="newsText" rows="6" placeholder="Enter text to analyze..."></textarea>
+                        <textarea class="form-control" id="newsText" rows="6" placeholder="Paste a full news article here..."></textarea>
                     </div>
                     <div class="d-grid gap-2">
                         <button type="button" id="analyzeBtn" class="btn btn-primary btn-lg">
-                            Analyze Tone
+                            Analyze Spectrum
                         </button>
                     </div>
                 </form>
 
-                <div id="resultArea" class="mt-4" style="display: none;">
-                    <hr>
-                    <h5 class="text-center">Analysis Result</h5>
+                <div id="resultArea" class="mt-5" style="display: none;">
+                    <h5 class="mb-3">Spectrum Visualization</h5>
 
-                    <div class="alert text-center" id="resultAlert" role="alert">
-                        <h4 id="sentimentLabel" class="alert-heading"></h4>
-                        <p class="mb-0">Confidence Score: <strong id="sentimentScore"></strong></p>
+                    <div id="visualizationContainer" class="p-4 border rounded bg-light" style="font-size: 1.1em; line-height: 1.8;">
+                        </div>
+
+                    <div class="mt-3 text-end text-muted small">
+                        * Darker colors indicate higher confidence.
                     </div>
                 </div>
 
@@ -37,35 +43,31 @@
 
 <script>
     document.getElementById('analyzeBtn').addEventListener('click', async function() {
-        // Get Elements
         const textInput = document.getElementById('newsText');
         const resultArea = document.getElementById('resultArea');
+        const vizContainer = document.getElementById('visualizationContainer');
         const errorArea = document.getElementById('errorArea');
         const btn = document.getElementById('analyzeBtn');
 
-        // Clear previous results & Show Loading State
+        // Reset UI
         resultArea.style.display = 'none';
         errorArea.style.display = 'none';
+        vizContainer.innerHTML = ''; // Clear previous results
         btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Analyzing...';
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing Sentences...';
 
         const text = textInput.value.trim();
-
         if (!text) {
-            errorArea.innerText = "Please enter some text first.";
-            errorArea.style.display = 'block';
-            btn.disabled = false;
-            btn.innerText = "Analyze Tone";
+            showError("Please enter text.");
+            resetBtn();
             return;
         }
 
         try {
-            // Send POST Request to Flask Backend
+            // Call API
             const response = await fetch('/predict', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ text: text })
             });
 
@@ -75,39 +77,62 @@
                 throw new Error(data.error || 'Network error');
             }
 
-            // Update UI with Result
-            const label = data.label; // e.g., "POSITIVE" or "NEGATIVE"
-            const score = data.score;
+            // --- Visualization Logic in Sprint 3 ---
 
-            const resultAlert = document.getElementById('resultAlert');
-            const labelHeading = document.getElementById('sentimentLabel');
-            const scoreSpan = document.getElementById('sentimentScore');
+            data.forEach(item => {
+                // Create a span for each sentence
+                const span = document.createElement('span');
+                span.innerText = item.sentence + " "; // Add space between sentences
 
-            // Simple Logic for Coloring
-            // POSITIVE -> Green, NEGATIVE -> Red, Others -> Grey
-            resultAlert.className = 'alert text-center'; // reset classes
-            if (label === 'POSITIVE') {
-                resultAlert.classList.add('alert-success');
-                labelHeading.innerText = "POSITIVE TONE";
-            } else if (label === 'NEGATIVE') {
-                resultAlert.classList.add('alert-danger');
-                labelHeading.innerText = "NEGATIVE TONE";
-            } else {
-                resultAlert.classList.add('alert-secondary');
-                labelHeading.innerText = label;
-            }
+                // Calculate Color
+                // Formula: opacity = (score - 0.5)
+                // Cap max opacity at 0.5 to ensure text remains readable.
+                let opacity = (item.score - 0.5);
+                if (opacity < 0.1) opacity = 0.1;
+                if (opacity > 0.5) opacity = 0.5;
 
-            scoreSpan.innerText = score;
+                let color = 'transparent';
+
+                if (item.label === 'POSITIVE') {
+                    // Bootstrap Success Green: 25, 135, 84
+                    color = `rgba(25, 135, 84, ${opacity})`;
+                    span.title = `Positive (${Math.round(item.score*100)}%)`; // Tooltip
+                } else if (item.label === 'NEGATIVE') {
+                    // Bootstrap Danger Red: 220, 53, 69
+                    color = `rgba(220, 53, 69, ${opacity})`;
+                    span.title = `Negative (${Math.round(item.score*100)}%)`;
+                } else {
+                    // Neutral: No background, or very faint grey
+                    color = 'transparent';
+                    span.title = `Neutral (${Math.round(item.score*100)}%)`;
+                    span.style.color = '#555'; // Slightly dim neutral text
+                }
+
+                span.style.backgroundColor = color;
+                span.style.borderRadius = "4px";
+                span.style.padding = "2px 0"; // Slight padding for highlight effect
+
+                // Append to container
+                vizContainer.appendChild(span);
+            });
+
             resultArea.style.display = 'block';
 
         } catch (error) {
-            console.error('Error:', error);
-            errorArea.innerText = "Analysis failed: " + error.message;
-            errorArea.style.display = 'block';
+            console.error(error);
+            showError("Analysis failed: " + error.message);
         } finally {
-            // Reset Button
+            resetBtn();
+        }
+
+        function showError(msg) {
+            errorArea.innerText = msg;
+            errorArea.style.display = 'block';
+        }
+
+        function resetBtn() {
             btn.disabled = false;
-            btn.innerText = "Analyze Tone";
+            btn.innerText = "Analyze Spectrum";
         }
     });
 </script>
