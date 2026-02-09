@@ -1,41 +1,126 @@
 {% extends "base.html" %}
 
 {% block content %}
+
+<style>
+    /* The main card container */
+    .main-card {
+        border: none;
+        border-radius: 16px; /* Rounder corners */
+        box-shadow: 0 4px 20px rgba(0,0,0,0.06); /* Diffused shadow */
+        padding: 2rem;
+        background: #fff;
+    }
+
+    .page-title {
+        font-weight: 600;
+        color: #2c3e50;
+    }
+
+    /* The form controls */
+    .form-control-modern {
+        border-radius: 12px;
+        border: 1px solid #e0e0e0;
+        padding: 1rem;
+        resize: vertical; /* Only allow vertical resize */
+        font-size: 1rem;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .form-control-modern:focus {
+        border-color: #3498db;
+        box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+    }
+
+    /* Button Style */
+    .btn-modern {
+        background-color: #2c3e50; /* Deep slate blue */
+        border: none;
+        border-radius: 12px;
+        padding: 12px 24px;
+        font-weight: 500;
+        font-size: 1.1rem;
+        transition: background-color 0.2s, transform 0.1s;
+    }
+
+    .btn-modern:hover {
+        background-color: #34495e; /* Slightly lighter on hover */
+    }
+
+    .btn-modern:active {
+         transform: scale(0.99); /* Subtle click effect */
+    }
+
+    .btn-modern:disabled {
+        background-color: #95a5a6;
+    }
+
+    /* Legend Badges */
+    .badge-legend {
+        font-weight: 500;
+        padding: 6px 12px;
+        border-radius: 30px; /* Pill shape */
+        margin: 0 4px;
+    }
+
+    /* Visualization Container */
+    #visualizationContainer {
+        background-color: #f8f9fa; /* Very light gray background for results */
+        border-radius: 12px;
+        border: 1px solid #eee;
+        font-size: 1.1em;
+        line-height: 1.9;
+        text-align: justify;
+    }
+
+    /* Individual sentence highlights */
+    .spectrum-span {
+        border-radius: 4px;
+        padding: 2px 0;
+        /* Introduce a subtle transition for when they appear */
+        transition: background-color 0.3s ease;
+    }
+</style>
+
 <div class="row justify-content-center">
-    <div class="col-md-10">
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <h3 class="card-title text-center mb-4">News Spectrum Analysis</h3>
+    <div class="col-lg-9 col-xl-8">
+        <div class="card main-card">
+            <div class="card-body p-0"> <h3 class="page-title text-center mb-3">News Spectrum Analysis</h3>
                 <p class="text-muted text-center mb-4">
-                    Visualize the emotional structure of news. <br>
-                    <span class="badge bg-success bg-opacity-25 text-dark">Positive</span>
-                    <span class="badge bg-secondary bg-opacity-10 text-dark">Neutral</span>
-                    <span class="badge bg-danger bg-opacity-25 text-dark">Negative</span>
+                    Visualize the emotional structure of news text driven by BERT NLP model. <br class="d-md-none">
+                    <br>
+                    <span class="badge badge-legend" style="background-color: rgba(25, 135, 84, 0.15); color: #198754;">Positive</span>
+                    <span class="badge badge-legend" style="background-color: #f0f0f0; color: #666;">Neutral</span>
+                    <span class="badge badge-legend" style="background-color: rgba(220, 53, 69, 0.15); color: #dc3545;">Negative</span>
                 </p>
 
                 <form id="analyzeForm">
-                    <div class="mb-3">
-                        <textarea class="form-control" id="newsText" rows="6" placeholder="Paste a full news article here..."></textarea>
+                    <div class="mb-4">
+                        <textarea class="form-control form-control-modern" id="newsText" rows="8" placeholder="Paste a full news article here to begin analysis..."></textarea>
                     </div>
-                    <div class="d-grid gap-2">
-                        <button type="button" id="analyzeBtn" class="btn btn-primary btn-lg">
+                    <div class="d-grid gap-2 col-md-8 mx-auto">
+                        <button type="button" id="analyzeBtn" class="btn btn-primary btn-modern">
                             Analyze Spectrum
                         </button>
                     </div>
                 </form>
 
                 <div id="resultArea" class="mt-5" style="display: none;">
-                    <h5 class="mb-3">Spectrum Visualization</h5>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                         <h5 class="mb-0" style="font-weight: 600; color: #2c3e50;">Spectrum Visualization</h5>
+                         <small class="text-muted">Hover text for details</small>
+                    </div>
 
-                    <div id="visualizationContainer" class="p-4 border rounded bg-light" style="font-size: 1.1em; line-height: 1.8;">
+
+                    <div id="visualizationContainer" class="p-4">
                         </div>
 
-                    <div class="mt-3 text-end text-muted small">
-                        * Darker colors indicate higher confidence.
+                    <div class="mt-2 text-end text-muted small fst-italic">
+                        * Stronger colors indicate higher model confidence.
                     </div>
                 </div>
 
-                <div id="errorArea" class="alert alert-danger mt-3" style="display: none;"></div>
+                <div id="errorArea" class="alert alert-danger mt-3 rounded-3" style="display: none;"></div>
             </div>
         </div>
     </div>
@@ -54,11 +139,11 @@
         errorArea.style.display = 'none';
         vizContainer.innerHTML = ''; // Clear previous results
         btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing Sentences...';
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Processing Sentences...';
 
         const text = textInput.value.trim();
         if (!text) {
-            showError("Please enter text.");
+            showError("Please enter text to analyze.");
             resetBtn();
             return;
         }
@@ -82,10 +167,15 @@
             data.forEach(item => {
                 // Create a span for each sentence
                 const span = document.createElement('span');
-                span.innerText = item.sentence + " "; // Add space between sentences
+                span.innerText = item.sentence;
+                span.classList.add('spectrum-span');
 
-                // Calculate Color
-                // Formula: opacity = (score - 0.5)
+                // Add a space after the span
+                vizContainer.appendChild(span);
+                vizContainer.appendChild(document.createTextNode(" "));
+
+                // Calculate Opacity based on score
+                // Map score 0.5-1.0 to opacity 0.1-0.5
                 // Cap max opacity at 0.5 to ensure text remains readable.
                 let opacity = (item.score - 0.5);
                 if (opacity < 0.1) opacity = 0.1;
@@ -94,29 +184,23 @@
                 let color = 'transparent';
 
                 if (item.label === 'POSITIVE') {
-                    // Bootstrap Success Green: 25, 135, 84
-                    color = `rgba(25, 135, 84, ${opacity})`;
-                    span.title = `Positive (${Math.round(item.score*100)}%)`; // Tooltip
+                    color = `rgba(25, 135, 84, ${opacity})`; // Bootstrap Success Green
+                    span.title = `Positive (${Math.round(item.score*100)}% confidence)`;
                 } else if (item.label === 'NEGATIVE') {
-                    // Bootstrap Danger Red: 220, 53, 69
-                    color = `rgba(220, 53, 69, ${opacity})`;
-                    span.title = `Negative (${Math.round(item.score*100)}%)`;
+                    color = `rgba(220, 53, 69, ${opacity})`; // Bootstrap Danger Red
+                    span.title = `Negative (${Math.round(item.score*100)}% confidence)`;
                 } else {
-                    // Neutral: No background, or very faint grey
                     color = 'transparent';
-                    span.title = `Neutral (${Math.round(item.score*100)}%)`;
+                    span.title = `Neutral (${Math.round(item.score*100)}% confidence)`;
                     span.style.color = '#555'; // Slightly dim neutral text
                 }
 
                 span.style.backgroundColor = color;
-                span.style.borderRadius = "4px";
-                span.style.padding = "2px 0"; // Slight padding for highlight effect
-
-                // Append to container
-                vizContainer.appendChild(span);
             });
 
             resultArea.style.display = 'block';
+            // Smooth scroll to results
+            resultArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
         } catch (error) {
             console.error(error);
