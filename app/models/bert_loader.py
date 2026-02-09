@@ -1,7 +1,8 @@
 from transformers import pipeline
 import logging
 
-# Configure logging to see what's happening
+# Configure logging
+logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -9,70 +10,81 @@ logger = logging.getLogger(__name__)
 class NewsBert:
     def __init__(self):
         """
-        Initialize the BERT pipeline for sentiment analysis.
-        We use a distilled version of BERT which is faster and lighter,
-        perfect for a web application MVP.
+        Initialize the BERT pipeline.
+        'ProsusAI/finbert' is trained on financial news, which is inherently
+        objective/neutral. This allows us to detect "Neutral" sentiment,
+        which is crucial for accurate news bias analysis.
         """
-        logger.info("Loading BERT model pipeline...")
+        logger.info("Loading FinBERT model pipeline...")
         try:
-            # specifically specifying the model ensures consistency
+            # We explicitly specify the model to ensure 3-class classification
+            self.model_name = "ProsusAI/finbert"
             self.classifier = pipeline(
                 "sentiment-analysis",
-                model="distilbert-base-uncased-finetuned-sst-2-english"
+                model=self.model_name
             )
-            logger.info("BERT model loaded successfully.")
+            logger.info(f"Model {self.model_name} loaded successfully.")
         except Exception as e:
             logger.error(f"Failed to load BERT model: {e}")
             self.classifier = None
 
     def predict(self, text):
         """
-        Analyze the sentiment of the input text.
+        Analyze the sentiment of a SINGLE sentence.
 
         Args:
-            text (str): The news article text to analyze.
+            text (str): A single sentence or short text segment.
 
         Returns:
-            dict: A dictionary containing 'label' (POSITIVE/NEGATIVE) and 'score'.
-                  Returns None if model is not loaded or input is invalid.
+            dict: {'label': 'POSITIVE'/'NEGATIVE'/'NEUTRAL', 'score': float}
         """
         if not self.classifier:
-            logger.error("Model not initialized.")
             return {"error": "Model not ready"}
 
         if not text or not isinstance(text, str):
-            logger.warning("Invalid input text.")
             return {"error": "Invalid input"}
 
         try:
-            # BERT models have a hard limit of 512 tokens (roughly 2000-2500 characters).
-            # Tell the pipeline to truncate inputs that exceed the maximum length.
-            results = self.classifier(text, truncation=True, max_length=512)
+            results = self.classifier(text)
 
-            # The pipeline returns a list of dicts: [{'label': 'POSITIVE', 'score': 0.99}]
+            # FinBERT returns [{'label': 'positive', 'score': 0.9}]
             result = results[0]
 
+            # Map model labels to our project defined labels for frontend consistency
+            label_map = {
+                "positive": "POSITIVE",
+                "negative": "NEGATIVE",
+                "neutral": "NEUTRAL"
+            }
+
+            original_label = result['label'].lower()
+            standardized_label = label_map.get(original_label, "UNKNOWN")
+
             return {
-                "label": result['label'],  # POSITIVE or NEGATIVE
+                "label": standardized_label,
                 "score": round(result['score'], 4)
             }
+
         except Exception as e:
-            logger.error(f"Prediction error: {e}")
+            logger.error(f"Prediction error for text '{text[:20]}...': {e}")
             return {"error": str(e)}
 
 
-# Simple test block to verify it works when running this file directly
+# --- Local Test Block ---
+# This block is only used for local testing of the model,
+# and will not be invoked during the actual software runtime
 if __name__ == "__main__":
-    print("Testing NewsBert class...")
+    print("--- Testing BERT Model ---")
     bert = NewsBert()
 
-    test_cases = [
-        "The economy is booming and citizens are happier than ever.",
-        "The catastrophic failure of the policy led to misery.",
-        "The meeting is scheduled for 5 PM.",
-        "The meeting is canceled."
+    test_sentences = [
+        "The company reported a record-breaking profit increase of 20%.",  # Should be POSITIVE
+        "The stock market crashed due to the unexpected policy change.",  # Should be NEGATIVE
+        "The meeting is scheduled for next Tuesday at 10 AM.",  # Should be NEUTRAL
+        "One year ago today, President Donald J. Trump returned to office with a resounding mandate to restore prosperity, secure the border, rebuild American strength, and put the American people first. In just 365 days, President Trump has delivered truly transformative results with the most accomplished first year of any presidential term in modern history."
     ]
 
-    for t in test_cases:
-        print(f"\nText: {t}")
-        print(f"Result: {bert.predict(t)}")
+    for s in test_sentences:
+        res = bert.predict(s)
+        print(f"\nSentence: {s}")
+        print(f"Result: {res}")
