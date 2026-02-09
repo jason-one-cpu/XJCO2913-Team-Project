@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, jsonify
 from app.models.bert_loader import NewsBert
+from sentence_splitter import SentenceSplitter
 import logging
 
 # Configure logging
@@ -8,56 +9,89 @@ logger = logging.getLogger(__name__)
 
 main = Blueprint('main', __name__)
 
-# Model Initialization
-# Initialize the model globally here so it loads only ONCE when the app starts.
+# --- Global Initialization ---
+# Load the BERT Model
 try:
-    logger.info("Initializing BERT model for the application...")
+    logger.info("Initializing BERT model...")
     bert_model = NewsBert()
 except Exception as e:
     logger.error(f"Critical Error: Failed to initialize BERT model: {e}")
     bert_model = None
 
+# Load the Sentence Splitter
+# We initialize this once to avoid overhead on every request.
+try:
+    logger.info("Initializing Sentence Splitter...")
+    splitter = SentenceSplitter(language='en')
+except Exception as e:
+    logger.error(f"Failed to initialize Splitter: {e}")
+    splitter = None
+
 
 @main.route('/')
 def index():
-    """
-    Renders the homepage.
-    """
     return render_template('index.html')
 
 
 @main.route('/predict', methods=['POST'])
 def predict():
     """
-    API Endpoint to predict sentiment of a given text.
-    Expected JSON input: { "text": "Some news content..." }
+    Sprint 3 Upgrade: Sentence-level Analysis.
+    Input: { "text": "Full article text..." }
+    Output: [
+        {"sentence": "Sentence 1", "label": "POSITIVE", "score": 0.9},
+        {"sentence": "Sentence 2", "label": "NEUTRAL", "score": 0.8}
+    ]
     """
-    # Input Validation
+    # Request Validation
     if not request.is_json:
         return jsonify({"error": "Missing JSON in request"}), 400
 
     data = request.get_json()
-    text = data.get('text', '')
+    full_text = data.get('text', '')
 
-    if not text or not isinstance(text, str) or not text.strip():
+    if not full_text or not isinstance(full_text, str) or not full_text.strip():
         return jsonify({"error": "Invalid or empty text provided"}), 400
 
-    # Check Model Status
-    if not bert_model:
-        return jsonify({"error": "Model is not initialized on server"}), 500
+    if not bert_model or not splitter:
+        return jsonify({"error": "Server services not initialized"}), 500
 
-    # Model Inference
     try:
-        # call the predict method from Webb's code
-        result = bert_model.predict(text)
+        # Split Text into Sentences
+        # We break the Block into Pieces
+        sentences = splitter.split(full_text)
 
-        # Check for internal model errors
-        if "error" in result:
-            return jsonify(result), 500
+        results = []
 
-        # Return Success Response
-        return jsonify(result), 200
+        # Batch Prediction
+        # Loop through each sentence and get its individual sentiment.
+        for sentence in sentences:
+            # Skip empty nonsense
+            if not sentence.strip():
+                continue
+
+            # Call Webb's model
+            prediction = bert_model.predict(sentence)
+
+            # If model returns error, handle it and don't crash the whole loop
+            if "error" in prediction:
+                logger.warning(f"Model error on sentence: {sentence[:10]}...")
+                label = "UNKNOWN"
+                score = 0.0
+            else:
+                label = prediction['label']
+                score = prediction['score']
+
+            # Append structured result
+            results.append({
+                "sentence": sentence,
+                "label": label,
+                "score": score
+            })
+
+        # Return List of Results
+        return jsonify(results), 200
 
     except Exception as e:
         logger.error(f"Prediction route error: {e}")
-        return jsonify({"error": "Internal Server Error"}), 500
+        return jsonify({"error": f"Internal Server Error: {str(e)}"}), 500
