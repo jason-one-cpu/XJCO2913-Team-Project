@@ -5,18 +5,110 @@
     <div class="col-md-8">
         <div class="card shadow-sm">
             <div class="card-body">
-                <h3 class="card-title text-center mb-4">Analyze News Bias</h3>
-                <form>
+                <h3 class="card-title text-center mb-4">News-Spectrum Analysis</h3>
+
+                <form id="analyzeForm">
                     <div class="mb-3">
                         <label for="newsText" class="form-label">Paste News Article Here:</label>
                         <textarea class="form-control" id="newsText" rows="6" placeholder="Enter text to analyze..."></textarea>
                     </div>
                     <div class="d-grid gap-2">
-                        <button type="button" class="btn btn-primary btn-lg">Analyze Bias (Demo)</button>
+                        <button type="button" id="analyzeBtn" class="btn btn-primary btn-lg">
+                            Analyze Tone
+                        </button>
                     </div>
                 </form>
+
+                <div id="resultArea" class="mt-4" style="display: none;">
+                    <hr>
+                    <h5 class="text-center">Analysis Result</h5>
+
+                    <div class="alert text-center" id="resultAlert" role="alert">
+                        <h4 id="sentimentLabel" class="alert-heading"></h4>
+                        <p class="mb-0">Confidence Score: <strong id="sentimentScore"></strong></p>
+                    </div>
+                </div>
+
+                <div id="errorArea" class="alert alert-danger mt-3" style="display: none;"></div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+    document.getElementById('analyzeBtn').addEventListener('click', async function() {
+        // Get Elements
+        const textInput = document.getElementById('newsText');
+        const resultArea = document.getElementById('resultArea');
+        const errorArea = document.getElementById('errorArea');
+        const btn = document.getElementById('analyzeBtn');
+
+        // Clear previous results & Show Loading State
+        resultArea.style.display = 'none';
+        errorArea.style.display = 'none';
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Analyzing...';
+
+        const text = textInput.value.trim();
+
+        if (!text) {
+            errorArea.innerText = "Please enter some text first.";
+            errorArea.style.display = 'block';
+            btn.disabled = false;
+            btn.innerText = "Analyze Tone";
+            return;
+        }
+
+        try {
+            // Send POST Request to Flask Backend
+            const response = await fetch('/predict', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ text: text })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Network error');
+            }
+
+            // Update UI with Result
+            const label = data.label; // e.g., "POSITIVE" or "NEGATIVE"
+            const score = data.score;
+
+            const resultAlert = document.getElementById('resultAlert');
+            const labelHeading = document.getElementById('sentimentLabel');
+            const scoreSpan = document.getElementById('sentimentScore');
+
+            // Simple Logic for Coloring
+            // POSITIVE -> Green, NEGATIVE -> Red, Others -> Grey
+            resultAlert.className = 'alert text-center'; // reset classes
+            if (label === 'POSITIVE') {
+                resultAlert.classList.add('alert-success');
+                labelHeading.innerText = "POSITIVE TONE";
+            } else if (label === 'NEGATIVE') {
+                resultAlert.classList.add('alert-danger');
+                labelHeading.innerText = "NEGATIVE TONE";
+            } else {
+                resultAlert.classList.add('alert-secondary');
+                labelHeading.innerText = label;
+            }
+
+            scoreSpan.innerText = score;
+            resultArea.style.display = 'block';
+
+        } catch (error) {
+            console.error('Error:', error);
+            errorArea.innerText = "Analysis failed: " + error.message;
+            errorArea.style.display = 'block';
+        } finally {
+            // Reset Button
+            btn.disabled = false;
+            btn.innerText = "Analyze Tone";
+        }
+    });
+</script>
 {% endblock %}
