@@ -80,6 +80,22 @@
         /* Introduce a subtle transition for when they appear */
         transition: background-color 0.3s ease;
     }
+
+    #cursorTooltip {
+        position: fixed;
+        z-index: 10000;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        color: white;
+        pointer-events: none;
+        display: none;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        font-weight: 500;
+        transform: translate(-50%, -120%); /* Let tooltip on follow mouse */
+        white-space: nowrap;
+        transition: background-color 0.2s ease;
+    }
 </style>
 
 <div class="row justify-content-center">
@@ -108,9 +124,8 @@
                 <div id="resultArea" class="mt-5" style="display: none;">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                          <h5 class="mb-0" style="font-weight: 600; color: #2c3e50;">Spectrum Visualization</h5>
-                         <small class="text-muted">Hover text for details</small>
+                         <small class="text-muted">Hover text to see details</small>
                     </div>
-
 
                     <div id="visualizationContainer" class="p-4">
                         </div>
@@ -126,7 +141,12 @@
     </div>
 </div>
 
+<div id="cursorTooltip"></div>
+
 <script>
+    // Get the tooltip element
+    const tooltip = document.getElementById('cursorTooltip');
+
     document.getElementById('analyzeBtn').addEventListener('click', async function() {
         const textInput = document.getElementById('newsText');
         const resultArea = document.getElementById('resultArea');
@@ -181,25 +201,32 @@
                 if (opacity < 0.1) opacity = 0.1;
                 if (opacity > 0.5) opacity = 0.5;
 
-                let color = 'transparent';
+                let bgColor = 'transparent';
+                let tooltipColor = '#495057'; // Default Neutral Grey
 
                 if (item.label === 'POSITIVE') {
-                    color = `rgba(25, 135, 84, ${opacity})`; // Bootstrap Success Green
-                    span.title = `Positive (${Math.round(item.score*100)}% confidence)`;
+                    bgColor = `rgba(25, 135, 84, ${opacity})`;
+                    tooltipColor = '#198754'; // Green
                 } else if (item.label === 'NEGATIVE') {
-                    color = `rgba(220, 53, 69, ${opacity})`; // Bootstrap Danger Red
-                    span.title = `Negative (${Math.round(item.score*100)}% confidence)`;
+                    bgColor = `rgba(220, 53, 69, ${opacity})`;
+                    tooltipColor = '#dc3545'; // Red
                 } else {
-                    color = 'transparent';
-                    span.title = `Neutral (${Math.round(item.score*100)}% confidence)`;
-                    span.style.color = '#555'; // Slightly dim neutral text
+                    bgColor = 'transparent';
+                    span.style.color = '#555';
+                    tooltipColor = '#495057';
                 }
 
-                span.style.backgroundColor = color;
+                span.style.backgroundColor = bgColor;
+
+                // Store data for our custom tooltip
+                span.dataset.tooltipText = `${item.label} (${Math.round(item.score*100)}%)`;
+                span.dataset.tooltipBg = tooltipColor;
+
+                vizContainer.appendChild(span);
+                vizContainer.appendChild(document.createTextNode(" "));
             });
 
             resultArea.style.display = 'block';
-            // Smooth scroll to results
             resultArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
         } catch (error) {
@@ -219,5 +246,33 @@
             btn.innerText = "Analyze Spectrum";
         }
     });
+
+    // --- Global Mouse Event Listener for Tooltip ---
+
+    const container = document.getElementById('visualizationContainer');
+
+    // Mouse Move: Update position and content
+    container.addEventListener('mousemove', function(e) {
+        const target = e.target.closest('.spectrum-span');
+
+        if (target) {
+            tooltip.style.display = 'block';
+            tooltip.innerText = target.dataset.tooltipText;
+            tooltip.style.backgroundColor = target.dataset.tooltipBg;
+
+            // Move tooltip to cursor position
+            // Added 15px offset to not cover the cursor
+            tooltip.style.left = e.clientX + 'px';
+            tooltip.style.top = (e.clientY - 10) + 'px';
+        } else {
+            tooltip.style.display = 'none';
+        }
+    });
+
+    // Mouse Leave: Hide tooltip when leaving the container
+    container.addEventListener('mouseleave', function() {
+        tooltip.style.display = 'none';
+    });
 </script>
+
 {% endblock %}
