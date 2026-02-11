@@ -1,71 +1,178 @@
 {% extends "base.html" %}
 
 {% block content %}
+
+<style>
+    /* The main card container */
+    .main-card {
+        border: none;
+        border-radius: 16px; /* Rounder corners */
+        box-shadow: 0 4px 20px rgba(0,0,0,0.06); /* Diffused shadow */
+        padding: 2rem;
+        background: #fff;
+    }
+
+    .page-title {
+        font-weight: 600;
+        color: #2c3e50;
+    }
+
+    /* The form controls */
+    .form-control-modern {
+        border-radius: 12px;
+        border: 1px solid #e0e0e0;
+        padding: 1rem;
+        resize: vertical; /* Only allow vertical resize */
+        font-size: 1rem;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .form-control-modern:focus {
+        border-color: #3498db;
+        box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+    }
+
+    /* Button Style */
+    .btn-modern {
+        background-color: #2c3e50; /* Deep slate blue */
+        border: none;
+        border-radius: 12px;
+        padding: 12px 24px;
+        font-weight: 500;
+        font-size: 1.1rem;
+        transition: background-color 0.2s, transform 0.1s;
+    }
+
+    .btn-modern:hover {
+        background-color: #34495e; /* Slightly lighter on hover */
+    }
+
+    .btn-modern:active {
+         transform: scale(0.99); /* Subtle click effect */
+    }
+
+    .btn-modern:disabled {
+        background-color: #95a5a6;
+    }
+
+    /* Legend Badges */
+    .badge-legend {
+        font-weight: 500;
+        padding: 6px 12px;
+        border-radius: 30px; /* Pill shape */
+        margin: 0 4px;
+    }
+
+    /* Visualization Container */
+    #visualizationContainer {
+        background-color: #f8f9fa; /* Very light gray background for results */
+        border-radius: 12px;
+        border: 1px solid #eee;
+        font-size: 1.1em;
+        line-height: 1.9;
+        text-align: justify;
+    }
+
+    /* Individual sentence highlights */
+    .spectrum-span {
+        border-radius: 4px;
+        padding: 2px 0;
+        /* Introduce a subtle transition for when they appear */
+        transition: background-color 0.3s ease;
+    }
+
+    #cursorTooltip {
+        position: fixed;
+        z-index: 10000;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        color: white;
+        pointer-events: none;
+        display: none;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        font-weight: 500;
+        transform: translate(-50%, -120%); /* Let tooltip on follow mouse */
+        white-space: nowrap;
+        transition: background-color 0.2s ease;
+    }
+</style>
+
 <div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <h3 class="card-title text-center mb-4">News-Spectrum Analysis</h3>
+    <div class="col-lg-9 col-xl-8">
+        <div class="card main-card">
+            <div class="card-body p-0"> <h3 class="page-title text-center mb-3">News Spectrum Analysis</h3>
+                <p class="text-muted text-center mb-4">
+                    Visualize the emotional structure of news text driven by BERT NLP model. <br class="d-md-none">
+                    <br>
+                    <span class="badge badge-legend" style="background-color: rgba(25, 135, 84, 0.15); color: #198754;">Positive</span>
+                    <span class="badge badge-legend" style="background-color: #f0f0f0; color: #666;">Neutral</span>
+                    <span class="badge badge-legend" style="background-color: rgba(220, 53, 69, 0.15); color: #dc3545;">Negative</span>
+                </p>
 
                 <form id="analyzeForm">
-                    <div class="mb-3">
-                        <label for="newsText" class="form-label">Paste News Article Here:</label>
-                        <textarea class="form-control" id="newsText" rows="6" placeholder="Enter text to analyze..."></textarea>
+                    <div class="mb-4">
+                        <textarea class="form-control form-control-modern" id="newsText" rows="8" placeholder="Paste a full news article here to begin analysis..."></textarea>
                     </div>
-                    <div class="d-grid gap-2">
-                        <button type="button" id="analyzeBtn" class="btn btn-primary btn-lg">
-                            Analyze Tone
+                    <div class="d-grid gap-2 col-md-8 mx-auto">
+                        <button type="button" id="analyzeBtn" class="btn btn-primary btn-modern">
+                            Analyze Spectrum
                         </button>
                     </div>
                 </form>
 
-                <div id="resultArea" class="mt-4" style="display: none;">
-                    <hr>
-                    <h5 class="text-center">Analysis Result</h5>
+                <div id="resultArea" class="mt-5" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                         <h5 class="mb-0" style="font-weight: 600; color: #2c3e50;">Spectrum Visualization</h5>
+                         <small class="text-muted">Hover text to see details</small>
+                    </div>
 
-                    <div class="alert text-center" id="resultAlert" role="alert">
-                        <h4 id="sentimentLabel" class="alert-heading"></h4>
-                        <p class="mb-0">Confidence Score: <strong id="sentimentScore"></strong></p>
+                    <div id="visualizationContainer" class="p-4">
+                        </div>
+
+                    <div class="mt-2 text-end text-muted small fst-italic">
+                        * Stronger colors indicate higher model confidence.
                     </div>
                 </div>
 
-                <div id="errorArea" class="alert alert-danger mt-3" style="display: none;"></div>
+                <div id="errorArea" class="alert alert-danger mt-3 rounded-3" style="display: none;"></div>
             </div>
         </div>
     </div>
 </div>
 
+<div id="cursorTooltip"></div>
+
 <script>
+    // Get the tooltip element
+    const tooltip = document.getElementById('cursorTooltip');
+
     document.getElementById('analyzeBtn').addEventListener('click', async function() {
-        // Get Elements
         const textInput = document.getElementById('newsText');
         const resultArea = document.getElementById('resultArea');
+        const vizContainer = document.getElementById('visualizationContainer');
         const errorArea = document.getElementById('errorArea');
         const btn = document.getElementById('analyzeBtn');
 
-        // Clear previous results & Show Loading State
+        // Reset UI
         resultArea.style.display = 'none';
         errorArea.style.display = 'none';
+        vizContainer.innerHTML = ''; // Clear previous results
         btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Analyzing...';
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Processing Sentences...';
 
         const text = textInput.value.trim();
-
         if (!text) {
-            errorArea.innerText = "Please enter some text first.";
-            errorArea.style.display = 'block';
-            btn.disabled = false;
-            btn.innerText = "Analyze Tone";
+            showError("Please enter text to analyze.");
+            resetBtn();
             return;
         }
 
         try {
-            // Send POST Request to Flask Backend
+            // Call API
             const response = await fetch('/predict', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ text: text })
             });
 
@@ -75,40 +182,97 @@
                 throw new Error(data.error || 'Network error');
             }
 
-            // Update UI with Result
-            const label = data.label; // e.g., "POSITIVE" or "NEGATIVE"
-            const score = data.score;
+            // --- Visualization Logic in Sprint 3 ---
 
-            const resultAlert = document.getElementById('resultAlert');
-            const labelHeading = document.getElementById('sentimentLabel');
-            const scoreSpan = document.getElementById('sentimentScore');
+            data.forEach(item => {
+                // Create a span for each sentence
+                const span = document.createElement('span');
+                span.innerText = item.sentence;
+                span.classList.add('spectrum-span');
 
-            // Simple Logic for Coloring
-            // POSITIVE -> Green, NEGATIVE -> Red, Others -> Grey
-            resultAlert.className = 'alert text-center'; // reset classes
-            if (label === 'POSITIVE') {
-                resultAlert.classList.add('alert-success');
-                labelHeading.innerText = "POSITIVE TONE";
-            } else if (label === 'NEGATIVE') {
-                resultAlert.classList.add('alert-danger');
-                labelHeading.innerText = "NEGATIVE TONE";
-            } else {
-                resultAlert.classList.add('alert-secondary');
-                labelHeading.innerText = label;
-            }
+                // Add a space after the span
+                vizContainer.appendChild(span);
+                vizContainer.appendChild(document.createTextNode(" "));
 
-            scoreSpan.innerText = score;
+                // Calculate Opacity based on score
+                // Map score 0.5-1.0 to opacity 0.1-0.5
+                // Cap max opacity at 0.5 to ensure text remains readable.
+                let opacity = (item.score - 0.5);
+                if (opacity < 0.1) opacity = 0.1;
+                if (opacity > 0.5) opacity = 0.5;
+
+                let bgColor = 'transparent';
+                let tooltipColor = '#495057'; // Default Neutral Grey
+
+                if (item.label === 'POSITIVE') {
+                    bgColor = `rgba(25, 135, 84, ${opacity})`;
+                    tooltipColor = '#198754'; // Green
+                } else if (item.label === 'NEGATIVE') {
+                    bgColor = `rgba(220, 53, 69, ${opacity})`;
+                    tooltipColor = '#dc3545'; // Red
+                } else {
+                    bgColor = 'transparent';
+                    span.style.color = '#555';
+                    tooltipColor = '#495057';
+                }
+
+                span.style.backgroundColor = bgColor;
+
+                // Store data for our custom tooltip
+                span.dataset.tooltipText = `${item.label} (${Math.round(item.score*100)}%)`;
+                span.dataset.tooltipBg = tooltipColor;
+
+                vizContainer.appendChild(span);
+                vizContainer.appendChild(document.createTextNode(" "));
+            });
+
             resultArea.style.display = 'block';
+            resultArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
         } catch (error) {
-            console.error('Error:', error);
-            errorArea.innerText = "Analysis failed: " + error.message;
-            errorArea.style.display = 'block';
+            console.error(error);
+            showError("Analysis failed: " + error.message);
         } finally {
-            // Reset Button
+            resetBtn();
+        }
+
+        function showError(msg) {
+            errorArea.innerText = msg;
+            errorArea.style.display = 'block';
+        }
+
+        function resetBtn() {
             btn.disabled = false;
-            btn.innerText = "Analyze Tone";
+            btn.innerText = "Analyze Spectrum";
         }
     });
+
+    // --- Global Mouse Event Listener for Tooltip ---
+
+    const container = document.getElementById('visualizationContainer');
+
+    // Mouse Move: Update position and content
+    container.addEventListener('mousemove', function(e) {
+        const target = e.target.closest('.spectrum-span');
+
+        if (target) {
+            tooltip.style.display = 'block';
+            tooltip.innerText = target.dataset.tooltipText;
+            tooltip.style.backgroundColor = target.dataset.tooltipBg;
+
+            // Move tooltip to cursor position
+            // Added 15px offset to not cover the cursor
+            tooltip.style.left = e.clientX + 'px';
+            tooltip.style.top = (e.clientY - 10) + 'px';
+        } else {
+            tooltip.style.display = 'none';
+        }
+    });
+
+    // Mouse Leave: Hide tooltip when leaving the container
+    container.addEventListener('mouseleave', function() {
+        tooltip.style.display = 'none';
+    });
 </script>
+
 {% endblock %}

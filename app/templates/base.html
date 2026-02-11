@@ -3,22 +3,86 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>News-Spectrum</title>
+    <title>News Spectrum</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='2' y='4' width='20' height='3' rx='1.5' fill='%2313c2c2'/%3E%3Crect x='8' y='10.5' width='20' height='3' rx='1.5' fill='%23dee2e6'/%3E%3Crect x='4' y='17' width='20' height='3' rx='1.5' fill='%23ff7a45'/%3E%3C/svg%3E">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f7f9; /* Soft light gray background */
+            color: #333;
+        }
+
+        /* Modern Navbar Style */
+        .navbar-modern {
+            background-color: #ffffff !important;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05); /* Soft shadow */
+            padding-top: 1rem;
+            padding-bottom: 1rem;
+        }
+
+        .navbar-modern .navbar-brand {
+            color: #2c3e50 !important; /* Dark slate color for brand */
+            font-weight: 600;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .brand-icon {
+            margin-right: 8px;
+            color: #3498db; /* Accent color for icon */
+        }
+
+        /* GitHub Icon Style */
+        .github-link {
+            color: #6c757d; /* Muted gray by default */
+            font-size: 1.5rem;
+            transition: color 0.2s, transform 0.2s;
+            display: flex;
+            align-items: center;
+        }
+
+        .github-link:hover {
+            color: #333; /* Darker on hover */
+            transform: translateY(-1px); /* Subtle lift */
+        }
+
+        /* Footer */
+        footer {
+            color: #888 !important;
+        }
+    </style>
 </head>
 <body>
-    <nav class="navbar navbar-dark bg-primary">
+    <nav class="navbar navbar-expand-lg navbar-light navbar-modern">
         <div class="container">
-            <a class="navbar-brand" href="#">News Spectrum</a>
+            <a class="navbar-brand" href="#">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="brand-icon">
+                    <rect x="2" y="4" width="20" height="3" rx="1.5" fill="#13c2c2"/>
+                    <rect x="8" y="10.5" width="20" height="3" rx="1.5" fill="#dee2e6"/>
+                    <rect x="4" y="17" width="20" height="3" rx="1.5" fill="#ff7a45"/>
+                </svg>
+                News Spectrum
+            </a>
+
+            <div class="ms-auto d-flex align-items-center">
+                <a href="https://github.com/jason-one-cpu/XJCO2913-Team-Project" target="_blank" class="github-link" title="View Project on GitHub">
+                    <i class="fab fa-github"></i>
+                </a>
+            </div>
         </div>
     </nav>
 
-    <div class="container mt-4">
+    <div class="container mt-5">
         {% block content %}{% endblock %}
     </div>
 
-    <footer class="text-center mt-5 py-3 text-muted">
-        <small>&copy; 2026 XJCO2913 Students Team Project. Sprint 2 Version.</small>
+    <footer class="text-center mt-5 py-4 text-muted small">
+        <p class="mb-0">&copy; XJCO2913 Students Team Project. Version 2.0.</p>
     </footer>
 </body>
 </html>
