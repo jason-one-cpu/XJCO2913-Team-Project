@@ -1,10 +1,13 @@
 from transformers import pipeline
 import logging
+from transformers import logging as hf_logging
+
 
 # Configure logging
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+hf_logging.set_verbosity_error()
 
 
 class NewsBert:
