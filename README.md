@@ -73,3 +73,4 @@ python run.py
 
 You will see logs indicating the BERT model is initializing. Once ready, access the app at: `http://127.0.0.1:5000/`
 
+After seeing the web page successfully loaded, you can start using News Spectrum. If you have any questions, you can refer to the [User Manual](https://github.com/jason-one-cpu/XJCO2913-Team-Project/wiki/User-Manual). More technical details can be found in the [Wiki Space](https://github.com/jason-one-cpu/XJCO2913-Team-Project/wiki).
